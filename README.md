@@ -16,6 +16,31 @@
 
 ## 2. 精确解
 
+### 解法一：Brute force
+
+1. 因为机器人在移动到除了最右边或最下边的格子外的位置时，都需要进行一次选择——向右或向下，所以可以生成一棵二叉树来表示所有可能的解
+2. 因为机器人从 $R(1,1)$ 到 $R(n,m)$ 需要移动 $n+m-2$ 步，又因为机器人只能向右或者向下移动，所以深度优先遍历二叉树后有 $2^{n+m-2}$ 条路径，因此可以采用Brute force遍历所有路径，得到最优解
+
+#### 伪代码一
+
+<pre class="pseudocode" lineNumber="true">
+\begin{algorithm}
+\caption{Exact Solution: Brute force}
+\begin{algorithmic}
+\PROCEDURE{BruteForce}{$M[n,m], Path_{temp}, i, j$}
+    \STATE $Path_{temp} = ['DOWN'] \times (n-1) + ['RIGHT'] \times (m-1)$
+    \
+        \STATE $Path_{temp} += "DOWN -> "$
+        \STATE $i += 1$
+    \ELIF{$$}
+        \STATE $Path_{temp} += "RIGHT -> "$
+        \STATE $j += 1$
+    \ENDIF
+\ENDPROCEDURE
+\end{algorithmic}
+\end{algorithm}
+</pre>
+
 ### 解法一：迭代遍历
 
 1. 因为机器人只能从左向右，从上向下移动，且机器人会收集经过的路径上的所有硬币，所以 $F(i,j)$ 的值为 $F(i-1,j)$ 和 $F(i,j-1)$ 中较大的值加上 $c_{ij}$
@@ -31,7 +56,6 @@ $$ F(i,0)=0 {\quad} for {\quad} 1 \leq i \leq n {\quad} and {\quad} F(0,j)=0 {\q
 \caption{Exact Solution: Iterative Traversal}
 \begin{algorithmic}
 \PROCEDURE{IterativeTraversal}{$M[n,m]$}
-    \STATE $F = [n,m]$
     \STATE $F[1,1] = M[1,1]$
     \FOR{$j=2$ \TO $m$}
         \STATE $F[1,j] = F[1,j-1] + M[1,j]$
@@ -42,29 +66,20 @@ $$ F(i,0)=0 {\quad} for {\quad} 1 \leq i \leq n {\quad} and {\quad} F(0,j)=0 {\q
             \STATE $F[i,j]=max(F[i-1,j],F[i,j-1])+M[i,j]$
         \ENDFOR
     \ENDFOR
-    \STATE $path=[n+m-1]$
-    \STATE $x=n$
-    \STATE $y=m$
-    \STATE $step=m+n-1$
+    \STATE $x, y=n, m$
     \WHILE{$x \gt 1$ \AND $y \gt 1$}
         \IF{$F[x-1,y] \gt F[x,y-1]$}
-            \STATE $step=step-1$
-            \STATE $y=y-1$
-            \STATE $path[step] = "UP"$
+            \STATE $y-=1$
+            \STATE $path += "UP -> "$
         \ELIF{$F[x-1,y] \lt F[x,y-1]$}
-            \STATE $step=step-1$
-            \STATE $x=x-1$
-            \STATE $path[step] = "LEFT"$
+            \STATE $x-=1$
+            \STATE $path += "LEFT -> "$
         \ELSE
-            \STATE $step=step-1$
-            \STATE $x=x-1$
-            \STATE $y=y-1$
-            \STATE $path[step] = "LEFT/UP"$
-            \STATE $step=step-1$
-            \STATE $path[step] = "UP/LEFT"$
+            \STATE $x-=1, y-=1$
+            \STATE $path+="LEFT/UP -> UP/LEFT -> "$
         \ENDIF
     \ENDWHILE
-    \RETURN $F[n,m], {\quad} path[n+m]$
+    \RETURN $F[n,m], {\quad} path$
 \ENDPROCEDURE
 \end{algorithmic}
 \end{algorithm}
@@ -76,6 +91,9 @@ $$ F(i,0)=0 {\quad} for {\quad} 1 \leq i \leq n {\quad} and {\quad} F(0,j)=0 {\q
 
 1. 因为机器人每移动一次，若机器人没有移动到最右边或最左边 $(i,j) {\quad} 1 \leq i < n-1, 1 \leq j < m-1$ ，就需要判断下一步要移动到右边相邻的位置或者下边相邻的位置，此时可以遇到两种情况： $A.$ 移动到两个位置后硬币数量相同（对应两个邻居都右硬币或都没有硬币的情况），以及 $B.$ 移动到两个位置后硬币数量不同（对应其中一个位置有硬币，另一个位置没有硬币的情况）；所以可以设置指导规则，判断最优路线
 2. 指导规则为：情况A下，始终选择右边的相邻位置；情况B下，始终选择有硬币的相邻位置；
+
+$$ F(i,j)=F(i,j-1)+M(i,j) {\quad} if {\quad} M(i-1, j) \leq M(i, j-1) \tag{2-1}$$
+$$ F(i,j)=F(i-1,j)+M(i,j) {\quad} if {\quad} M(i-1, j) > M(i, j-1) \tag{2-2}$$
 
 #### 伪代码二
 
@@ -114,8 +132,12 @@ $$ F(i,0)=0 {\quad} for {\quad} 1 \leq i \leq n {\quad} and {\quad} F(0,j)=0 {\q
 
 1. 因为贪心算法在硬币密度过低或过高或分布不均匀的情况下很难找到全局最优解，所以设计退火算法引入随机扰动并多次迭代来避免陷入局部最优解
 2. 优化解法三的指导规则为：情况A下，完全随机选择两个位置中的一个；情况B下，设置可调节的概率参数 $p \in (0,1)$ ，使得机器人以 $p$ 的概率移动到有硬币的位置；
-3. 利用初始化温度 $Temperature_{init}$ 和温度变化步长 $Temperature_{change}$ 以及退火停止温度 $Temperature_{min}$ 控制退火循环次数；利用 $Energy=(Temperature_{init}-Temperature_{now})/Temperature_{init}$ 和 $EnergyFix$ 为初始高温时决策的随机性提供较大的动能（可能性），动能随着温度降低而降低
-4. 记录退火过程中每一次搜索到的最优解和路径，取最大值作为全局最优解的近似解
+3. 利用初始化温度 $Temperature_{init}$ 和温度变化步长 $Temperature_{change}$ 以及退火停止温度 $Temperature_{min}$ 控制退火循环次数
+4. 利用 $Energy=(Temperature_{init}-Temperature_{now})/Temperature_{init}$ 和 $EnergyFix$ 为初始高温时决策的随机性提供较大的动能（可能性），动能随着温度降低而降低
+5. 记录退火过程中每一次搜索到的最优解和路径，取最大值作为全局最优解的近似解
+
+$$ F(i,j)=F(i-1,j)+M(i,j) {\quad} if {\quad} M(i-1, j) > M(i, j-1) {\quad} and {\quad} q-Energy > random(0,1) \tag{3-1}$$
+$$ F(i,j)=F(i-1,j)+M(i,j) {\quad} if {\quad} M(i-1, j) = M(i, j-1) and {\quad} random(0,1)>0.5 \tag{3-2}$$
 
 #### 伪代码三
 
