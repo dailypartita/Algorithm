@@ -1,0 +1,1 @@
+[read document](https://github.com/dailypartita/Algorithm/blob/master/README.pdf)
